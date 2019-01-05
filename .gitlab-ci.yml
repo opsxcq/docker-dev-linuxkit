@@ -1,0 +1,29 @@
+variables:
+    PUBLIC_TAG: 'strm/dev-linuxkit'
+stages:
+    - build
+    - download
+
+build:
+    stage: build
+    script:
+        - export IMAGE_TAG=$(echo -en $CI_BUILD_REF_NAME | tr -c '[:alnum:]_.-' '-' | sed 's/master/latest/g')
+        - docker login -u "gitlab-ci-token" -p "$CI_BUILD_TOKEN" $CI_REGISTRY
+        - docker build --pull -t "$CI_REGISTRY_IMAGE:$IMAGE_TAG" .
+        - docker push "$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+        - docker tag "$CI_REGISTRY_IMAGE:$IMAGE_TAG" "$PUBLIC_TAG"
+    tags:
+        - docker
+
+download:
+    stage: download
+    image: golang:1.11.4
+    script:
+        - go get -u github.com/moby/tool/cmd/moby 
+        - mv /go/bin/moby .
+        - go get -u github.com/linuxkit/linuxkit/src/cmd/linuxkit
+        - mv /go/bin/linuxkit .
+    artifacts:
+        paths:
+            - moby
+            - linuxkit
